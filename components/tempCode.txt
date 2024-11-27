@@ -1,0 +1,126 @@
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  CardFooter
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion"
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+
+import { useState } from 'react';
+import { useNavigate } from "react-router-dom";
+import { BellIcon, CheckIcon } from "@radix-ui/react-icons"
+import { AiOutlineLoading } from "react-icons/ai";
+import { firestore } from "firebase.config";
+import { useAuth } from './context/AuthContext';
+import { doc, updateDoc, collection, setDoc, query, where, getDocs,  } from "firebase/firestore";
+
+
+export default function RoleSelection() {
+  const { uid } = useAuth(); 
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null); 
+  const [selectedRole, setSelectedRole] = useState(null);
+  const navigate = useNavigate(); 
+
+  async function onSubmit(event) {
+    event.preventDefault();
+    setIsLoading(true);
+    setError(null); 
+    try {
+      console.log(uid);
+      // Query to find the document with the matching UID
+      const q = query(collection(firestore, "users"), where("uid", "==", uid)); 
+      const querySnapshot = await getDocs(q);
+      if (!querySnapshot.empty) {
+        const userDoc = querySnapshot.docs[0]; 
+        await setDoc(userDoc.ref, { role: selectedRole }, { merge: true });
+        console.log('User role updated successfully:', selectedRole);
+      } else {
+        console.error("No user document found with the provided UID.");
+        setError("Failed to update role. Please try again.");
+      }
+     } catch (error) {
+      setError(error.message); 
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  const handleRoleChange = (value) => {
+    console.log(value);
+    setSelectedRole(value);
+  }
+
+  return (
+    <Card className="mx-auto max-w-sm">
+      <CardHeader>
+        <CardTitle className="text-xl">Role Selection</CardTitle>
+        <CardDescription>
+          Select the desired role for your account
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+      <RadioGroup  onValueChange={handleRoleChange}> 
+          <Accordion type="single" collapsible className="w-full">
+            <AccordionItem value="admin">
+              <AccordionTrigger>
+              <RadioGroupItem value="admin" id="option-one" className="mr-2" />
+                Admin
+                </AccordionTrigger>
+              <AccordionContent>
+              <ul className="my-6 ml-6 list-disc [&>li]:mt-2">
+                <li>Create and Manage Institution</li>
+                <li>Incharge of Teachers-Waiting-Lobby</li>
+                <li>Manage Teachers</li>
+              </ul>
+              </AccordionContent>
+            </AccordionItem>
+           
+            <AccordionItem value="teacher">
+              <AccordionTrigger>
+              <RadioGroupItem value="teacher" id="option-two" className="mr-2" />
+              Teacher
+              </AccordionTrigger>
+              <AccordionContent>
+              <ul className="my-6 ml-6 list-disc [&>li]:mt-2">
+                <li>Create & Manage Question Papers.</li>
+                <li>Incharge of Students Waiting Lobby</li>
+                <li>Manage Students</li>
+              </ul>
+              </AccordionContent>
+            </AccordionItem>
+
+            <AccordionItem value="student">
+              <AccordionTrigger>
+              <RadioGroupItem value="student" id="option-three" className="mr-2" />
+              Student
+              </AccordionTrigger>
+              <AccordionContent>
+              <ul className="my-6 ml-6 list-disc [&>li]:mt-2">
+                <li>Access to Question Papers</li>
+                <li>Search for Question Papers</li>
+              </ul>
+              </AccordionContent>
+            </AccordionItem>
+        </Accordion>
+      </RadioGroup>
+    </CardContent>
+    <CardFooter className="flex justify-end">
+    <Button onClick={onSubmit} disabled={isLoading}> 
+          Proceed
+        </Button>
+      </CardFooter>
+    </Card>
+  );
+}
